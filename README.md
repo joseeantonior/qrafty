@@ -15,6 +15,7 @@ This repository runs as a Slack bot that tracks reputation points for people in 
 | `@Claude--` (or `@Claude --`) | @Claude loses 1 point |
 | `@Claude++ for being a great teammate` | +1 point, and the reason is recorded |
 | `@qrafty @Claude` | The bot replies with @Claude's tally and the reasons points were added or deducted |
+| `ship it` (anywhere in a message) | The bot posts the ship-it squirrel — bundled with the repo, no external image host needed. Requires the `files:write` bot scope |
 
 After every `++`/`--` event the bot replies in the channel with the delta, the optional reason, and the running total, e.g. `+1 point for @Claude for being a great teammate, total points 4`. Multiple votes in a single message are all counted, and both plain `@name` and raw Slack `<@U12345>` mentions are supported.
 
