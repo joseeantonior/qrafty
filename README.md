@@ -4,6 +4,47 @@
 ![Build Status: Ubuntu](https://github.com/hubotio/hubot/actions/workflows/nodejs-ubuntu.yml/badge.svg)
 ![Build Status: Window](https://github.com/hubotio/hubot/actions/workflows/nodejs-windows.yml/badge.svg)
 
+# Qrafty: a Slack reputation (plusplus) bot
+
+This repository runs as a Slack bot that tracks reputation points for people in your workspace. It detects `++` and `--` anywhere in a message (see [`scripts/plusplus.mjs`](scripts/plusplus.mjs)):
+
+| You say | What happens |
+| --- | --- |
+| `@Claude++` | @Claude gets +1 point |
+| `@Claude ++` | Same — a space before the `++` also works |
+| `@Claude--` (or `@Claude --`) | @Claude loses 1 point |
+| `@Claude++ for being a great teammate` | +1 point, and the reason is recorded |
+| `@qrafty @Claude` | The bot replies with @Claude's tally and the reasons points were added or deducted |
+
+After every `++`/`--` event the bot replies in the channel with the delta, the optional reason, and the running total, e.g. `+1 point for @Claude for being a great teammate, total points 4`. Multiple votes in a single message are all counted, and both plain `@name` and raw Slack `<@U12345>` mentions are supported.
+
+Scores persist across restarts in `.data/plusplus.json` (override the location with the `PLUSPLUS_FILE` environment variable).
+
+## Run it against Slack
+
+```sh
+npm install
+npm install @hubot-friends/hubot-slack
+HUBOT_SLACK_APP_TOKEN=xapp-your-app-token \
+HUBOT_SLACK_BOT_TOKEN=xoxb-your-bot-token \
+HUBOT_NAME=qrafty \
+npm start -- -a @hubot-friends/hubot-slack
+```
+
+## Try it locally in a terminal
+
+```sh
+npm install
+HUBOT_NAME=qrafty npm start -- -a Shell
+qrafty> @Claude++ for being a great teammate
++1 point for @Claude for being a great teammate, total points 1
+qrafty> @qrafty @Claude
+@Claude has 1 point:
+• +1 for being a great teammate
+```
+
+---
+
 # Hubot
 
 **Note: v10.0.4 accidentally contains the removal of CoffeeScript; v10.0.5 puts it back in**
