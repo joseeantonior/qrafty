@@ -15,7 +15,13 @@ This repository runs as a Slack bot that tracks reputation points for people in 
 | `@Claude--` (or `@Claude --`) | @Claude loses 1 point |
 | `@Claude++ for being a great teammate` | +1 point, and the reason is recorded |
 | `@qrafty @Claude` | The bot replies with @Claude's tally and the reasons points were added or deducted |
+| `{@Claude, @alice}++ for pairing` | Group votes: everyone in the braces gets the point (also works with `--`) |
+| `@qrafty top 5` / `@qrafty bottom 5` | Leaderboards: highest / lowest scoring users |
+| `@qrafty erase @Claude [reason]` | Erase a user's score entirely, or only the entries for one reason |
+| `@qrafty how much are points worth` | The eternal question |
 | `ship it` (anywhere in a message) | The bot posts the ship-it squirrel — bundled with the repo, no external image host needed. Requires the `files:write` bot scope |
+
+Guardrails, in the spirit of [hubot-plusplus-expanded](https://github.com/O-Mutt/hubot-plusplus-expanded): you can't `++` yourself (self-`--` is allowed), and sending the same person another point within 30 seconds trips a spam filter (configure with `PLUSPLUS_SPAM_WINDOW_SECONDS`, `0` disables). Every 100th point earns a `:100:`.
 
 After every `++`/`--` event the bot replies in the channel with the delta, the optional reason, and the running total, e.g. `+1 point for @Claude for being a great teammate, total points 4`. Multiple votes in a single message are all counted, and both plain `@name` and raw Slack `<@U12345>` mentions are supported.
 

@@ -17,6 +17,7 @@ describe('plusplus reputation script', () => {
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'plusplus-'))
     process.env.PLUSPLUS_FILE = path.join(tmpDir, 'plusplus.json')
+    process.env.PLUSPLUS_SPAM_WINDOW_SECONDS = '0'
     robot = new Robot(dummyRobot, false, 'qrafty')
     await robot.loadAdapter()
     await robot.run()
@@ -30,6 +31,7 @@ describe('plusplus reputation script', () => {
 
   afterEach(() => {
     delete process.env.PLUSPLUS_FILE
+    delete process.env.PLUSPLUS_SPAM_WINDOW_SECONDS
     robot.shutdown()
     fs.rmSync(tmpDir, { recursive: true, force: true })
   })
@@ -127,6 +129,92 @@ describe('plusplus reputation script', () => {
   it('replies when a user has no points yet', async () => {
     await say('@qrafty @nobody')
     assert.deepEqual(sent, ['@nobody has no points yet.'])
+  })
+
+  it('awards points to several users with {curly, brace} groups', async () => {
+    await say('{@alice, @bob}++ for great pairing')
+    assert.deepEqual(sent, [
+      '+1 point for @alice for great pairing, total points 1',
+      '+1 point for @bob for great pairing, total points 1'
+    ])
+  })
+
+  it('deducts points from a group too', async () => {
+    await say('{@alice, @bob}-- for breaking prod')
+    assert.deepEqual(sent, [
+      '-1 point for @alice for breaking prod, total points -1',
+      '-1 point for @bob for breaking prod, total points -1'
+    ])
+  })
+
+  it('blocks giving yourself a point', async () => {
+    await say('@tester++ for being awesome')
+    assert.deepEqual(sent, ["Hey @tester, no cheating — you can't give yourself points!"])
+    sent = []
+    await say('@qrafty @tester')
+    assert.deepEqual(sent, ['@tester has no points yet.'])
+  })
+
+  it('still allows self-deprecation with --', async () => {
+    await say('@tester-- for missing the meeting')
+    assert.deepEqual(sent, ['-1 point for @tester for missing the meeting, total points -1'])
+  })
+
+  it('spam-filters rapid repeat votes to the same person', async () => {
+    process.env.PLUSPLUS_SPAM_WINDOW_SECONDS = '60'
+    const robot2 = new Robot(dummyRobot, false, 'qrafty')
+    await robot2.loadAdapter()
+    await robot2.run()
+    await robot2.loadFile('./scripts', 'plusplus.mjs')
+    const sent2 = []
+    robot2.on('send', (envelope, ...strings) => {
+      sent2.push(strings.join(''))
+    })
+    const user2 = robot2.brain.userForId('test-user', { name: 'tester' })
+    await robot2.adapter.say(user2, '@Claude++', 'general')
+    await robot2.adapter.say(user2, '@Claude++', 'general')
+    robot2.shutdown()
+    assert.deepEqual(sent2, [
+      '+1 point for @Claude, total points 1',
+      'Looks like you hit the spam filter — you recently sent @Claude a point. Please slow your roll.'
+    ])
+  })
+
+  it('shows top and bottom leaderboards', async () => {
+    await say('@alice++')
+    await say('@alice++')
+    await say('@bob++')
+    await say('@carol--')
+    sent = []
+    await say('@qrafty top 2')
+    assert.deepEqual(sent, ['1. @alice: 2\n2. @bob: 1'])
+    sent = []
+    await say('@qrafty bottom 1')
+    assert.deepEqual(sent, ['1. @carol: -1'])
+  })
+
+  it('erases a user completely', async () => {
+    await say('@alice++')
+    sent = []
+    await say('@qrafty erase @alice')
+    assert.deepEqual(sent, ['Erased all points for @alice. A clean slate!'])
+    sent = []
+    await say('@qrafty @alice')
+    assert.deepEqual(sent, ['@alice has no points yet.'])
+  })
+
+  it('erases only the points for one reason', async () => {
+    await say('@alice++ for helping')
+    await say('@alice++ for helping')
+    await say('@alice++ for snacks')
+    sent = []
+    await say('@qrafty erase @alice for helping')
+    assert.deepEqual(sent, ['Erased 2 entries (+2) for helping for @alice, total points 1'])
+  })
+
+  it('knows how much points are worth', async () => {
+    await say('@qrafty how much are points worth?')
+    assert.deepEqual(sent, ['Points are made up and redeemable for absolutely nothing — except eternal glory, of course. :trophy:'])
   })
 
   it('persists scores to disk and loads them on startup', async () => {
